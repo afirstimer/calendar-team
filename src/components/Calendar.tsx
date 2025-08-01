@@ -1,11 +1,19 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "./CalendarGrid";
 import { CalendarHeader } from "./CalendarHeader";
 import { ViewSelector } from "./ViewSelector";
+import { TaskDetailDialog } from "./TaskDetailDialog";
+import { AddTaskDialog } from "./AddTaskDialog";
 
 export type CalendarView = "month" | "week" | "day" | "list" | "resources" | "timeline";
+
+export interface Person {
+    id: string;
+    name: string;
+    avatar?: string;
+}
 
 export interface CalendarEvent {
     id: string;
@@ -16,7 +24,14 @@ export interface CalendarEvent {
     color: "blue" | "red" | "purple" | "green";
     allDay?: boolean;
     description?: string;
+    assignees?: Person[];
 }
+
+const samplePeople: Person[] = [
+    { id: "1", name: "Captain America" },
+    { id: "2", name: "Iron Man" },
+    { id: "3", name: "Hawkeye" },
+];
 
 const sampleEvents: CalendarEvent[] = [
     {
@@ -27,6 +42,8 @@ const sampleEvents: CalendarEvent[] = [
         date: "2025-07-28",
         color: "purple",
         allDay: true,
+        description: "This is an all-day event that spans the entire day",
+        assignees: [samplePeople[0], samplePeople[1]],
     },
     {
         id: "2",
@@ -35,6 +52,8 @@ const sampleEvents: CalendarEvent[] = [
         endTime: "14:00",
         date: "2025-07-27",
         color: "red",
+        description: "Meeting to discuss project requirements and timeline",
+        assignees: [samplePeople[2]],
     },
     {
         id: "3",
@@ -43,6 +62,8 @@ const sampleEvents: CalendarEvent[] = [
         endTime: "13:00",
         date: "2025-07-28",
         color: "blue",
+        description: "Team workshop on new calendar features",
+        assignees: [samplePeople[0], samplePeople[3], samplePeople[4]],
     },
     {
         id: "4",
@@ -51,6 +72,8 @@ const sampleEvents: CalendarEvent[] = [
         endTime: "23:59",
         date: "2025-07-28",
         color: "purple",
+        description: "Extended development session",
+        assignees: [samplePeople[1], samplePeople[2]],
     },
     {
         id: "5",
@@ -59,6 +82,8 @@ const sampleEvents: CalendarEvent[] = [
         endTime: "20:00",
         date: "2025-07-30",
         color: "blue",
+        description: "Code review and testing session",
+        assignees: [samplePeople[3]],
     },
     {
         id: "6",
@@ -67,6 +92,8 @@ const sampleEvents: CalendarEvent[] = [
         endTime: "16:00",
         date: "2025-07-31",
         color: "blue",
+        description: "UI/UX design meeting",
+        assignees: [samplePeople[0], samplePeople[4]],
     },
     {
         id: "7",
@@ -75,20 +102,27 @@ const sampleEvents: CalendarEvent[] = [
         endTime: "19:00",
         date: "2025-08-01",
         color: "red",
+        description: "Feature implementation and testing",
+        assignees: [samplePeople[2], samplePeople[3]],
     },
     {
         id: "8",
-        title: "",
+        title: "Quick standup meeting",
         startTime: "18:00",
         endTime: "21:00",
         date: "2025-08-01",
         color: "purple",
+        description: "Daily team sync",
+        assignees: [samplePeople[1]],
     },
 ];
 
 export const Calendar = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [view, setView] = useState<CalendarView>("week");
+    const [view, setView] = useState<CalendarView>("month");
+    const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+    const [showAddTask, setShowAddTask] = useState(false);
+    const [events, setEvents] = useState<CalendarEvent[]>(sampleEvents);
 
     const navigateDate = (direction: "prev" | "next") => {
         const newDate = new Date(currentDate);
@@ -148,6 +182,19 @@ export const Calendar = () => {
         }
     };
 
+    const handleEventClick = (event: CalendarEvent) => {
+        setSelectedEvent(event);
+    };
+
+    const handleAddTask = (newTask: Omit<CalendarEvent, "id">) => {
+        const task: CalendarEvent = {
+            ...newTask,
+            id: Math.random().toString(36).substr(2, 9),
+        };
+        setEvents([...events, task]);
+        setShowAddTask(false);
+    };
+
     const goToToday = () => {
         setCurrentDate(new Date());
     };
@@ -186,13 +233,33 @@ export const Calendar = () => {
                     </div>
                 </div>
 
-                <ViewSelector currentView={view} onViewChange={setView} />
+                <div className="flex items-center gap-4">
+                    <ViewSelector currentView={view} onViewChange={setView} />
+                    <Button onClick={() => setShowAddTask(true)} className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Task
+                    </Button>
+                </div>
             </CalendarHeader>
 
             <CalendarGrid
                 currentDate={currentDate}
-                events={sampleEvents}
+                events={events}
                 view={view}
+                onEventClick={handleEventClick}
+            />
+
+            <TaskDetailDialog
+                event={selectedEvent}
+                isOpen={!!selectedEvent}
+                onClose={() => setSelectedEvent(null)}
+            />
+
+            <AddTaskDialog
+                isOpen={showAddTask}
+                onClose={() => setShowAddTask(false)}
+                onAddTask={handleAddTask}
+                people={samplePeople}
             />
         </div>
     );
