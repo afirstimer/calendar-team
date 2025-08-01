@@ -1,11 +1,13 @@
 import { CalendarEvent } from "./Calendar";
+import { Avatar } from "./ui/avatar";
 
 interface MonthViewProps {
     currentDate: Date;
     events: CalendarEvent[];
+    onEventClick?: (event: CalendarEvent) => void;
 }
 
-export const MonthView = ({ currentDate, events }: MonthViewProps) => {
+export const MonthView = ({ currentDate, events, onEventClick }: MonthViewProps) => {
     const getMonthDays = () => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -95,8 +97,19 @@ export const MonthView = ({ currentDate, events }: MonthViewProps) => {
                                         className="text-xs p-1 rounded text-white truncate"
                                         style={{ backgroundColor: `hsl(var(--event-${event.color}))` }}
                                         title={event.title}
+                                        onClick={() => onEventClick?.(event)}
                                     >
-                                        {event.allDay ? event.title : `${event.startTime} ${event.title}`}
+                                        <span className="font-medium">
+                                            {event.allDay ? event.title : `${event.startTime} ${event.title}`}
+                                        </span>
+                                        -
+                                        <Avatar className="w-4 h-4 inline-block">
+                                            {event.assignees && event.assignees?.length > 0 && (
+                                                <span className="text-[10px] text-white/80 truncate avatar-container">
+                                                    {event.assignees.map((a) => a).join(", ")}
+                                                </span>
+                                            )}
+                                        </Avatar>
                                     </div>
                                 ))}
                                 {dayEvents.length > 3 && (

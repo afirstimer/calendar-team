@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "./CalendarGrid";
@@ -6,6 +6,7 @@ import { CalendarHeader } from "./CalendarHeader";
 import { ViewSelector } from "./ViewSelector";
 import { TaskDetailDialog } from "./TaskDetailDialog";
 import { AddTaskDialog } from "./AddTaskDialog";
+import { createTask, getTasks, deleteTask } from "../lib/taskService";
 
 export type CalendarView = "month" | "week" | "day" | "list" | "resources" | "timeline";
 
@@ -24,13 +25,13 @@ export interface CalendarEvent {
     color: "blue" | "red" | "purple" | "green";
     allDay?: boolean;
     description?: string;
-    assignees?: Person[];
+    assignees?: [];
 }
 
 const samplePeople: Person[] = [
-    { id: "1", name: "Captain America" },
-    { id: "2", name: "Iron Man" },
-    { id: "3", name: "Hawkeye" },
+    { id: "HUY", name: "Huy Chau" },
+    { id: "THANH", name: "Thanh Tran" },
+    { id: "SINH_VIEN", name: "Dev1" },
 ];
 
 const sampleEvents: CalendarEvent[] = [
@@ -43,7 +44,7 @@ const sampleEvents: CalendarEvent[] = [
         color: "purple",
         allDay: true,
         description: "This is an all-day event that spans the entire day",
-        assignees: [samplePeople[0], samplePeople[1]],
+        assignees: [samplePeople[0].id, samplePeople[1].id],
     },
     {
         id: "2",
@@ -53,7 +54,7 @@ const sampleEvents: CalendarEvent[] = [
         date: "2025-07-27",
         color: "red",
         description: "Meeting to discuss project requirements and timeline",
-        assignees: [samplePeople[2]],
+        assignees: [samplePeople[2].id],
     },
     {
         id: "3",
@@ -63,7 +64,7 @@ const sampleEvents: CalendarEvent[] = [
         date: "2025-07-28",
         color: "blue",
         description: "Team workshop on new calendar features",
-        assignees: [samplePeople[0], samplePeople[3], samplePeople[4]],
+        assignees: [samplePeople[0].id],
     },
     {
         id: "4",
@@ -73,7 +74,7 @@ const sampleEvents: CalendarEvent[] = [
         date: "2025-07-28",
         color: "purple",
         description: "Extended development session",
-        assignees: [samplePeople[1], samplePeople[2]],
+        assignees: [samplePeople[1].id, samplePeople[2].id],
     },
     {
         id: "5",
@@ -83,7 +84,7 @@ const sampleEvents: CalendarEvent[] = [
         date: "2025-07-30",
         color: "blue",
         description: "Code review and testing session",
-        assignees: [samplePeople[3]],
+        assignees: [samplePeople[1].id],
     },
     {
         id: "6",
@@ -93,7 +94,7 @@ const sampleEvents: CalendarEvent[] = [
         date: "2025-07-31",
         color: "blue",
         description: "UI/UX design meeting",
-        assignees: [samplePeople[0], samplePeople[4]],
+        assignees: [samplePeople[0].id, samplePeople[1].id],
     },
     {
         id: "7",
@@ -103,7 +104,7 @@ const sampleEvents: CalendarEvent[] = [
         date: "2025-08-01",
         color: "red",
         description: "Feature implementation and testing",
-        assignees: [samplePeople[2], samplePeople[3]],
+        assignees: [samplePeople[0].id, samplePeople[1].id],
     },
     {
         id: "8",
@@ -113,7 +114,7 @@ const sampleEvents: CalendarEvent[] = [
         date: "2025-08-01",
         color: "purple",
         description: "Daily team sync",
-        assignees: [samplePeople[1]],
+        assignees: [samplePeople[1].id],
     },
 ];
 
@@ -122,7 +123,31 @@ export const Calendar = () => {
     const [view, setView] = useState<CalendarView>("month");
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     const [showAddTask, setShowAddTask] = useState(false);
-    const [events, setEvents] = useState<CalendarEvent[]>(sampleEvents);
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+    useEffect(() => {
+        const fetchTasks = async () => {
+            try {
+                const data = await getTasks();
+                const formatted = data.map((task) => ({
+                    id: task.id,
+                    title: task.title,
+                    startTime: task.startTime,
+                    endTime: task.endTime,
+                    date: task.date,
+                    color: task.color,
+                    allDay: task.allDay ?? false,
+                    description: task.description ?? "",
+                    assignees: task.assignees ?? [],
+                }));
+                setEvents(formatted);
+            } catch (err) {
+                console.error("Error loading tasks from Firebase:", err);
+            }
+        };
+
+        fetchTasks();
+    }, []);
 
     const navigateDate = (direction: "prev" | "next") => {
         const newDate = new Date(currentDate);
@@ -186,13 +211,15 @@ export const Calendar = () => {
         setSelectedEvent(event);
     };
 
-    const handleAddTask = (newTask: Omit<CalendarEvent, "id">) => {
-        const task: CalendarEvent = {
-            ...newTask,
-            id: Math.random().toString(36).substr(2, 9),
-        };
-        setEvents([...events, task]);
-        setShowAddTask(false);
+    const handleAddTask = async (task: Omit<CalendarEvent, "id" | "createdAt">) => {
+        await createTask({
+            ...task,
+            description: task.description ?? "",
+            assignees: (task.assignees ?? []).map((a: any) => typeof a === "string" ? a : a.name),
+            allDay: task.allDay ?? false,
+            createdAt: Date.now(),
+        });
+        await getTasks();
     };
 
     const goToToday = () => {
@@ -253,6 +280,7 @@ export const Calendar = () => {
                 event={selectedEvent}
                 isOpen={!!selectedEvent}
                 onClose={() => setSelectedEvent(null)}
+                onDelete={deleteTask}
             />
 
             <AddTaskDialog

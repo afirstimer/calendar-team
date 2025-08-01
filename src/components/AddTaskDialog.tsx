@@ -49,7 +49,7 @@ export const AddTaskDialog = ({ isOpen, onClose, onAddTask, people }: AddTaskDia
             endTime: isAllDay ? "" : endTime,
             color,
             allDay: isAllDay,
-            assignees,
+            assignees: selectedPeople,
         });
 
         // Reset form
@@ -167,12 +167,17 @@ export const AddTaskDialog = ({ isOpen, onClose, onAddTask, people }: AddTaskDia
                             {people.map((person) => (
                                 <div
                                     key={person.id}
-                                    className="flex items-center space-x-2 cursor-pointer"
-                                    onClick={() => togglePersonSelection(person.id)}
+                                    className="flex items-center space-x-2"
                                 >
                                     <Checkbox
                                         checked={selectedPeople.includes(person.id)}
-                                        onChange={() => togglePersonSelection(person.id)}
+                                        onCheckedChange={(checked: boolean) => {
+                                            if (checked) {
+                                                setSelectedPeople((prev) => [...prev, person.id]);
+                                            } else {
+                                                setSelectedPeople((prev) => prev.filter((id) => id !== person.id));
+                                            }
+                                        }}
                                     />
                                     <Avatar className="h-6 w-6">
                                         <AvatarFallback className="text-xs">
@@ -182,6 +187,7 @@ export const AddTaskDialog = ({ isOpen, onClose, onAddTask, people }: AddTaskDia
                                     <span className="text-sm">{person.name}</span>
                                 </div>
                             ))}
+
                         </div>
                     </div>
 

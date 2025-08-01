@@ -1,4 +1,4 @@
-import { CalendarEvent, CalendarView } from "./Calendar";
+import type { CalendarEvent, CalendarView } from "./Calendar";
 import { TimeSlots } from "./TimeSlots";
 import { EventBlock } from "./EventBlock";
 import { MonthView } from "./MonthView";

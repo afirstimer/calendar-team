@@ -3,23 +3,17 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CalendarEvent } from "./Calendar";
 import { Clock, Calendar, Users } from "lucide-react";
+import { Button } from "@/components/ui/button"; // adjust path if needed
 
 interface TaskDetailDialogProps {
     event: CalendarEvent | null;
     isOpen: boolean;
     onClose: () => void;
+    onDelete: (id: string) => void;
 }
 
-export const TaskDetailDialog = ({ event, isOpen, onClose }: TaskDetailDialogProps) => {
+export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete }: TaskDetailDialogProps) => {
     if (!event) return null;
-
-    const getInitials = (name: string) => {
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase();
-    };
 
     const formatTime = (startTime: string, endTime: string) => {
         if (!startTime || !endTime) return "All day";
@@ -73,13 +67,12 @@ export const TaskDetailDialog = ({ event, isOpen, onClose }: TaskDetailDialogPro
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {event.assignees.map((person) => (
-                                    <div key={person.id} className="flex items-center gap-2">
+                                    <div key={person} className="flex items-center gap-2">
                                         <Avatar className="h-8 w-8">
-                                            <AvatarFallback className="text-xs font-medium">
-                                                {getInitials(person.name)}
+                                            <AvatarFallback className="text-xs font-medium uppercase">
+                                                {person}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <span className="text-sm">{person.name}</span>
                                     </div>
                                 ))}
                             </div>
@@ -100,6 +93,23 @@ export const TaskDetailDialog = ({ event, isOpen, onClose }: TaskDetailDialogPro
                         </Badge>
                     </div>
                 </div>
+                <div className="flex justify-end pt-4 space-x-2">
+                    <Button variant="outline" onClick={onClose}>
+                        Close
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={() => {
+                            if (event.id) {
+                                onDelete(event.id);
+                                onClose();
+                            }
+                        }}
+                    >
+                        Delete Task
+                    </Button>
+                </div>
+
             </DialogContent>
         </Dialog>
     );

@@ -6,6 +6,7 @@ import { Users } from "lucide-react";
 interface ResourcesViewProps {
     currentDate: Date;
     events: CalendarEvent[];
+    onEventClick?: (event: CalendarEvent) => void;
 }
 
 // Sample resources

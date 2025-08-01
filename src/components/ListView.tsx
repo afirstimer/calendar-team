@@ -4,6 +4,7 @@ import { CalendarIcon, Clock } from "lucide-react";
 interface ListViewProps {
     currentDate: Date;
     events: CalendarEvent[];
+    onEventClick?: (event: CalendarEvent) => void;
 }
 
 export const ListView = ({ currentDate, events }: ListViewProps) => {

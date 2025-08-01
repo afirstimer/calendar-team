@@ -4,6 +4,7 @@ import { Clock, Calendar } from "lucide-react";
 interface TimelineViewProps {
     currentDate: Date;
     events: CalendarEvent[];
+    onEventClick?: (event: CalendarEvent) => void;
 }
 
 export const TimelineView = ({ currentDate, events }: TimelineViewProps) => {

@@ -5,6 +5,7 @@ import { EventBlock } from "./EventBlock";
 interface DayViewProps {
     currentDate: Date;
     events: CalendarEvent[];
+    onEventClick?: (event: CalendarEvent) => void;
 }
 
 export const DayView = ({ currentDate, events }: DayViewProps) => {
