@@ -29,9 +29,9 @@ export interface CalendarEvent {
 }
 
 const samplePeople: Person[] = [
-    { id: "HUY", name: "Huy Chau" },
-    { id: "THANH", name: "Thanh Tran" },
-    { id: "SINH_VIEN", name: "Dev1" },
+    { id: "HC", name: "Huy Chau" },
+    { id: "TT", name: "Thanh Tran" },
+    { id: "DEV", name: "Dev1" },
 ];
 
 const sampleEvents: CalendarEvent[] = [
