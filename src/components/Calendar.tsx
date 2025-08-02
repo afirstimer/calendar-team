@@ -219,7 +219,8 @@ export const Calendar = () => {
             allDay: task.allDay ?? false,
             createdAt: Date.now(),
         });
-        await getTasks();
+        // reload page
+        window.location.reload();
     };
 
     const goToToday = () => {

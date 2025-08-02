@@ -38,5 +38,6 @@ export const updateTask = async (
 export const deleteTask = async (id: string) => {
   const docRef = doc(db, "tasks", id);
   await deleteDoc(docRef);
-  await getTasks();
+  // reload page
+  window.location.reload();
 };
