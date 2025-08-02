@@ -10,9 +10,10 @@ interface TaskDetailDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onDelete: (id: string) => void;
+    onComplete: (event: CalendarEvent) => void;
 }
 
-export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete }: TaskDetailDialogProps) => {
+export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete, onComplete }: TaskDetailDialogProps) => {
     if (!event) return null;
 
     const formatTime = (startTime: string, endTime: string) => {
@@ -33,7 +34,9 @@ export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete }: TaskDetai
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-md">
                 <DialogHeader>
-                    <DialogTitle className="text-lg font-semibold">{event.title}</DialogTitle>
+                    <DialogTitle className={event.completed ? "line-through text-muted-foreground" : "text-lg font-semibold"}>
+                        {event.title}
+                    </DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-4">
@@ -94,6 +97,17 @@ export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete }: TaskDetai
                     </div>
                 </div>
                 <div className="flex justify-end pt-4 space-x-2">
+                    {!event.completed && (
+                        <Button
+                            onClick={() => {
+                                onComplete(event);
+                                onClose();
+                            }}
+                            variant="default"
+                        >
+                            Mark as Completed
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={onClose}>
                         Close
                     </Button>

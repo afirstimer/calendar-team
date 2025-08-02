@@ -21,4 +21,5 @@ export interface TaskInput {
   color: string;
   assignees: string[]; // user IDs
   createdAt: number;
+  completed: boolean;
 }

@@ -97,7 +97,7 @@ export const MonthView = ({ currentDate, events, onEventClick }: MonthViewProps)
                                 {dayEvents.slice(0, 3).map((event) => (
                                     <div
                                         key={event.id}
-                                        className="text-xs p-1 rounded text-white truncate"
+                                        className={event.completed ? 'line-through text-muted-foreground' : 'text-xs p-1 rounded text-white truncate'}
                                         style={{ backgroundColor: `hsl(var(--event-${event.color}))` }}
                                         title={event.title}
                                         onClick={() => onEventClick?.(event)}
