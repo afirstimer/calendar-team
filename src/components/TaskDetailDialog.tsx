@@ -92,7 +92,8 @@ export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete, onComplete 
                 ${event.color === "green" ? "border-green-200 bg-green-50 text-green-700" : ""}
               `}
                         >
-                            {event.color}
+                            {event.color === "blue" ? "Thấp" : ""}
+                            {event.color === "red" ? "Cao" : ""}
                         </Badge>
                     </div>
                 </div>
