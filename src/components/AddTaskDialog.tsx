@@ -41,10 +41,14 @@ export const AddTaskDialog = ({ isOpen, onClose, onAddTask, people }: AddTaskDia
 
         const assignees = people.filter(person => selectedPeople.includes(person.id));
 
+        // format date
+        const [year, month, day] = date.split("-").map(Number);
+        const localDate = new Date(year, month - 1, day); 
+
         onAddTask({
             title,
             description,
-            date,
+            date: localDate.toISOString(),
             startTime: isAllDay ? "" : startTime,
             endTime: isAllDay ? "" : endTime,
             color,

@@ -49,7 +49,10 @@ export const MonthView = ({ currentDate, events, onEventClick }: MonthViewProps)
 
     const getEventsForDate = (date: Date) => {
         const dateStr = date.toISOString().split('T')[0];
-        return events.filter(event => event.date === dateStr);
+        return events.filter(event => {
+            const eventDateStr = new Date(event.date).toISOString().split('T')[0];
+            return eventDateStr === dateStr;
+        });
     };
 
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
