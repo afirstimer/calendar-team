@@ -64,7 +64,6 @@ export const AddTaskDialog = ({ isOpen, onClose, onAddTask, people }: AddTaskDia
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
         if (!title.trim()) return;
 
         const assignees = people.filter(person => selectedPeople.includes(person.id));
@@ -74,18 +73,47 @@ export const AddTaskDialog = ({ isOpen, onClose, onAddTask, people }: AddTaskDia
         const [year, month, day] = date.split("-").map(Number);
         const localDate = new Date(year, month - 1, day);
 
-        onAddTask({
-            title,
-            description: finalDescription,
-            date: localDate.toISOString(),
-            startTime: isAllDay ? "" : startTime,
-            endTime: isAllDay ? "" : endTime,
-            color: getPriorityColor(priority),
-            allDay: isAllDay,
-            assignees: assignees.map((a) => a.id),
-            priority,
-            repeat,
-        });
+        const repeatCount = 10; // Create 10 future events
+        const tasksToAdd: Omit<CalendarEvent, "id">[] = [];
+
+        for (let i = 0; i < (repeat === "none" ? 1 : repeatCount); i++) {
+            let repeatDate = new Date(localDate);
+            if (repeat === "daily") repeatDate.setDate(localDate.getDate() + i);
+            if (repeat === "weekly") repeatDate.setDate(localDate.getDate() + i * 7);
+            if (repeat === "monthly") repeatDate.setMonth(localDate.getMonth() + i);
+
+            tasksToAdd.push({
+                title,
+                description: finalDescription,
+                date: repeatDate.toISOString(),
+                startTime: isAllDay ? "" : startTime,
+                endTime: isAllDay ? "" : endTime,
+                color: getPriorityColor(priority),
+                allDay: isAllDay,
+                assignees: assignees.map((a) => getInitials(a.name)),
+                assigneeIds: assignees.map((a) => a.id),
+                priority,
+                repeat,
+            });
+        }
+
+        if (repeat !== "none") {
+            tasksToAdd.forEach(task => onAddTask(task));
+        } else {
+            onAddTask({
+                title,
+                description: finalDescription,
+                date: localDate.toISOString(),
+                startTime: isAllDay ? "" : startTime,
+                endTime: isAllDay ? "" : endTime,
+                color: getPriorityColor(priority),
+                allDay: isAllDay,
+                assignees: assignees.map((a) => getInitials(a.name)),
+                assigneeIds: assignees.map((a) => a.id),
+                priority,
+                repeat,
+            });
+        }
 
         // Reset form
         setTitle("");
@@ -139,10 +167,10 @@ export const AddTaskDialog = ({ isOpen, onClose, onAddTask, people }: AddTaskDia
                                 <RadioGroupItem value="text" id="text" />
                                 <Label htmlFor="text">Text</Label>
                             </div>
-                            <div className="flex items-center space-x-2">
+                            {/* <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="todo" id="todo" />
                                 <Label htmlFor="todo">To-do List</Label>
-                            </div>
+                            </div> */}
                         </RadioGroup>
                     </div>
 

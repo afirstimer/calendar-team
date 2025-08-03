@@ -19,7 +19,9 @@ export interface TaskInput {
   endTime: string;
   allDay: boolean;
   color: string;
-  assignees: string[]; // user IDs
+  assignees: string[]; // user names
   createdAt: number;
   completed: boolean;
+  assigneeIds: string[];
+  repeat: string;
 }

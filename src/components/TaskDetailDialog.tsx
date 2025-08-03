@@ -11,9 +11,10 @@ interface TaskDetailDialogProps {
     onClose: () => void;
     onDelete: (id: string) => void;
     onComplete: (event: CalendarEvent) => void;
+    isAdmin?: boolean;
 }
 
-export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete, onComplete }: TaskDetailDialogProps) => {
+export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete, onComplete, isAdmin }: TaskDetailDialogProps) => {
     if (!event) return null;
 
     const formatTime = (startTime: string, endTime: string) => {
@@ -112,17 +113,19 @@ export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete, onComplete 
                     <Button variant="outline" onClick={onClose}>
                         Close
                     </Button>
-                    <Button
-                        variant="destructive"
-                        onClick={() => {
-                            if (event.id) {
-                                onDelete(event.id);
-                                onClose();
-                            }
-                        }}
-                    >
-                        Delete Task
-                    </Button>
+                    {isAdmin && (
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                if (event.id) {
+                                    onDelete(event.id);
+                                    onClose();
+                                }
+                            }}
+                        >
+                            Delete Task
+                        </Button>
+                    )}
                 </div>
 
             </DialogContent>

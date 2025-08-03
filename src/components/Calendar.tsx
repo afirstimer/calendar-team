@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "./CalendarGrid";
@@ -7,6 +7,12 @@ import { ViewSelector } from "./ViewSelector";
 import { TaskDetailDialog } from "./TaskDetailDialog";
 import { AddTaskDialog } from "./AddTaskDialog";
 import { completeTask, createTask, deleteTask, getTasks } from "../lib/taskService";
+import { useAuth } from "@/context/AuthContext";
+import { User as UserIcon, LogOut } from "lucide-react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { UserList } from "./UserList";
+import { useToast } from "@/hooks/use-toast";
 
 export type CalendarView = "month" | "week" | "day" | "list" | "resources" | "timeline";
 
@@ -14,6 +20,8 @@ export interface Person {
     id: string;
     name: string;
     avatar?: string;
+    isOnline?: boolean;
+    isAdmin?: boolean;
 }
 
 export interface CalendarEvent {
@@ -26,16 +34,11 @@ export interface CalendarEvent {
     allDay?: boolean;
     description?: string;
     assignees?: string[];
+    assigneeIds?: string[];
     priority?: "low" | "medium" | "high";
     repeat?: "none" | "daily" | "weekly" | "monthly";
     completed?: boolean;
 }
-
-const samplePeople: Person[] = [
-    { id: "HC", name: "Huy Chau" },
-    { id: "TT", name: "Thanh Tran" },
-    { id: "DEV", name: "Dev1" },
-];
 
 export const Calendar = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -43,12 +46,57 @@ export const Calendar = () => {
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     const [showAddTask, setShowAddTask] = useState(false);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const { user, logout } = useAuth();
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const [people, setPeople] = useState<Person[]>([]);
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const { toast } = useToast();
+
+    const handleUserClick = (userId: string) => {
+        setSelectedUserId(userId);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const snapshot = await getDocs(collection(db, "users"));
+                const users = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: data.uid,
+                        name: data.name || data.email,
+                        avatar: "" // if you later support avatars
+                    };
+                });
+                setPeople(users);
+            } catch (err) {
+                console.error("Error loading users:", err);
+            }
+        };
+
+        fetchUsers();
+    }, []);
+
 
     useEffect(() => {
         const fetchTasks = async () => {
             try {
                 const data = await getTasks();
-                const formatted = data.map((task) => ({
+                const currentUserId = user?.uid;
+                const allFormatted = data.map((task) => ({
                     id: task.id,
                     title: task.title,
                     startTime: task.startTime,
@@ -58,19 +106,24 @@ export const Calendar = () => {
                     allDay: task.allDay ?? false,
                     description: task.description ?? "",
                     assignees: task.assignees ?? [],
+                    assigneeIds: task.assigneeIds ?? [],
                     priority: task.priority ?? "low",
                     repeat: task.repeat ?? "none",
                     completed: task.completed ?? false
                 }));
-                console.log("Formatted tasks:", formatted);
-                setEvents(formatted);
+
+                const visibleTasks = selectedUserId
+                    ? allFormatted.filter(task => task.assigneeIds.includes(selectedUserId))
+                    : allFormatted.filter(task => task.assigneeIds.includes(user?.uid));
+
+                setEvents(visibleTasks);
             } catch (err) {
                 console.error("Error loading tasks from Firebase:", err);
             }
         };
 
         fetchTasks();
-    }, []);
+    }, [selectedUserId, user]);
 
     const navigateDate = (direction: "prev" | "next") => {
         const newDate = new Date(currentDate);
@@ -135,18 +188,23 @@ export const Calendar = () => {
     };
 
     const handleAddTask = async (task: Omit<CalendarEvent, "id">) => {
-        console.log(task);
         await createTask({
             ...task,
             description: task.description ?? "",
             assignees: (task.assignees ?? []).map((a: any) => typeof a === "string" ? a : a.name),
+            assigneeIds: (task.assigneeIds ?? []).map((a: any) => typeof a === "string" ? a : a.id),
             allDay: task.allDay ?? false,
             createdAt: Date.now(),
             completed: false,
+            repeat: task.repeat ?? "none",
         });
         setShowAddTask(false);
+        toast({
+            title: "Task Added",
+            description: "Your task has been successfully created.",
+        });
         // reload page
-        // window.location.reload();
+        window.location.reload();
     };
 
     const handleCompleteTask = async (event: CalendarEvent) => {
@@ -193,14 +251,49 @@ export const Calendar = () => {
                     </div>
                 </div>
 
+                <UserList people={people} onUserClick={handleUserClick} />
                 <div className="flex items-center gap-4">
                     <ViewSelector currentView={view} onViewChange={setView} />
                     <Button onClick={() => setShowAddTask(true)} className="gap-2">
                         <Plus className="h-4 w-4" />
                         Add Task
                     </Button>
+                    <div className="relative" ref={menuRef}>
+                        <button
+                            onClick={() => setShowMenu((prev) => !prev)}
+                            className="p-2 rounded-full border hover:bg-muted"
+                        >
+                            <UserIcon className="h-5 w-5" />
+                        </button>
+
+                        {showMenu && (
+                            <div className="absolute right-0 mt-2 w-40 bg-white border shadow-md rounded z-10">
+                                <div className="px-4 py-2 text-sm text-muted-foreground border-b">
+                                    {user?.email ?? "Unknown"}
+                                </div>
+                                <button
+                                    onClick={logout}
+                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm hover:bg-muted"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    Logout
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </CalendarHeader>
+
+            {selectedUserId ? (
+                <p className="py-4 bg-muted/50 border-b border-calendar-grid flex justify-center">
+                    You are viewing tasks of {people.find((p) => p.id === selectedUserId)?.name || "Unknown"}
+                </p>
+            ) : (
+                <p className="py-4 bg-muted/50 border-b border-calendar-grid flex justify-center">
+                    You are viewing your tasks
+                </p>
+            )}
+
 
             <CalendarGrid
                 currentDate={currentDate}
@@ -215,13 +308,14 @@ export const Calendar = () => {
                 onClose={() => setSelectedEvent(null)}
                 onDelete={deleteTask}
                 onComplete={handleCompleteTask}
+                isAdmin={people.find((p) => p.id === user?.uid)?.isAdmin ?? false}
             />
 
             <AddTaskDialog
                 isOpen={showAddTask}
                 onClose={() => setShowAddTask(false)}
                 onAddTask={handleAddTask}
-                people={samplePeople}
+                people={people}
             />
         </div>
     );
