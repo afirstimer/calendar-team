@@ -61,7 +61,7 @@ export const DateTasksDialog = ({
                                                     className="w-3 h-3 rounded-full"
                                                     style={{ backgroundColor: `hsl(var(--event-${event.color}))` }}
                                                 />
-                                                <h4 className="font-medium text-sm">{event.title}</h4>
+                                                <h4 className={event.completed ? "line-through" : "font-medium text-sm"}>{event.title}</h4>
                                             </div>
 
                                             {!event.allDay && (
