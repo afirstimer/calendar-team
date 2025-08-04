@@ -1,13 +1,13 @@
 import { CalendarEvent } from "./Calendar";
-import { Avatar } from "./ui/avatar";
 
 interface MonthViewProps {
     currentDate: Date;
     events: CalendarEvent[];
     onEventClick?: (event: CalendarEvent) => void;
+    onDateClick?: (date: Date, events: CalendarEvent[]) => void;
 }
 
-export const MonthView = ({ currentDate, events, onEventClick }: MonthViewProps) => {
+export const MonthView = ({ currentDate, events, onEventClick, onDateClick }: MonthViewProps) => {
     const getMonthDays = () => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -85,8 +85,9 @@ export const MonthView = ({ currentDate, events, onEventClick }: MonthViewProps)
                     return (
                         <div
                             key={index}
-                            className={`bg-background p-2 min-h-[120px] relative ${!isCurrentMonth ? 'text-muted-foreground' : ''
+                            className={`bg-background p-2 min-h-[120px] relative cursor-pointer hover:bg-muted/50 ${!isCurrentMonth ? 'text-muted-foreground' : ''
                                 } ${isToday ? 'bg-calendar-today' : ''}`}
+                            onClick={() => onDateClick?.(date, dayEvents)}
                         >
                             <div className={`text-sm font-medium mb-1 ${isToday ? 'text-primary' : ''}`}>
                                 {date.getDate()}
@@ -97,26 +98,22 @@ export const MonthView = ({ currentDate, events, onEventClick }: MonthViewProps)
                                 {dayEvents.slice(0, 3).map((event) => (
                                     <div
                                         key={event.id}
-                                        className={event.completed ? 'line-through text-muted-foreground' : 'text-xs p-1 rounded text-white truncate'}
+                                        className={event.completed ? 'line-through text-muted-foreground' : 'text-xs p-1 rounded text-white truncate cursor-pointer hover:opacity-90'}
                                         style={{ backgroundColor: `hsl(var(--event-${event.color}))` }}
                                         title={event.title}
                                         onClick={() => onEventClick?.(event)}
                                     >
-                                        <span className="font-medium">
-                                            {event.allDay ? event.title : `${event.startTime} ${event.title}`}
-                                        </span>
-                                        -
-                                        <Avatar className="w-4 h-4 inline-block">
-                                            {event.assignees && event.assignees?.length > 0 && (
-                                                <span className="text-[10px] text-white/80 truncate avatar-container">
-                                                    {event.assignees.map((a) => a).join(", ")}
-                                                </span>
-                                            )}
-                                        </Avatar>
+                                        {event.allDay ? event.title : `${event.startTime} ${event.title}`}
                                     </div>
                                 ))}
                                 {dayEvents.length > 3 && (
-                                    <div className="text-xs text-muted-foreground">
+                                    <div
+                                        className="text-xs text-muted-foreground hover:text-primary cursor-pointer"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDateClick?.(date, dayEvents);
+                                        }}
+                                    >
                                         +{dayEvents.length - 3} more
                                     </div>
                                 )}

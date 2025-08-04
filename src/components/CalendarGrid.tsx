@@ -13,13 +13,14 @@ interface CalendarGridProps {
     events: CalendarEvent[];
     view: CalendarView;
     onEventClick?: (event: CalendarEvent) => void;
+    onDateClick?: (date: Date, events: CalendarEvent[]) => void;
 }
 
-export const CalendarGrid = ({ currentDate, events, view, onEventClick }: CalendarGridProps) => {
+export const CalendarGrid = ({ currentDate, events, view, onEventClick, onDateClick }: CalendarGridProps) => {
     // Route to different view components
     switch (view) {
         case "month":
-            return <MonthView currentDate={currentDate} events={events} onEventClick={onEventClick} />;
+            return <MonthView currentDate={currentDate} events={events} onEventClick={onEventClick} onDateClick={onDateClick} />;
         case "week":
             return <WeekView currentDate={currentDate} events={events} onEventClick={onEventClick} />;
         case "day":

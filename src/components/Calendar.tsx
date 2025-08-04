@@ -13,6 +13,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { UserList } from "./UserList";
 import { useToast } from "@/hooks/use-toast";
+import { DateTasksDialog } from "./DateTasksDialog";
 
 export type CalendarView = "month" | "week" | "day" | "list" | "resources" | "timeline";
 
@@ -51,6 +52,8 @@ export const Calendar = () => {
     const menuRef = useRef<HTMLDivElement>(null);
     const [people, setPeople] = useState<Person[]>([]);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedDateEvents, setSelectedDateEvents] = useState<CalendarEvent[]>([]);
     const { toast } = useToast();
 
     const handleUserClick = (userId: string) => {
@@ -187,6 +190,11 @@ export const Calendar = () => {
         setSelectedEvent(event);
     };
 
+    const handleDateClick = (date: Date, dateEvents: CalendarEvent[]) => {
+        setSelectedDate(date);
+        setSelectedDateEvents(dateEvents);
+    };
+
     const handleAddTask = async (task: Omit<CalendarEvent, "id">) => {
         await createTask({
             ...task,
@@ -300,6 +308,7 @@ export const Calendar = () => {
                 events={events}
                 view={view}
                 onEventClick={handleEventClick}
+                onDateClick={handleDateClick}
             />
 
             <TaskDetailDialog
@@ -316,6 +325,14 @@ export const Calendar = () => {
                 onClose={() => setShowAddTask(false)}
                 onAddTask={handleAddTask}
                 people={people}
+            />
+
+            <DateTasksDialog
+                isOpen={!!selectedDate}
+                onClose={() => setSelectedDate(null)}
+                date={selectedDate}
+                events={selectedDateEvents}
+                onEventClick={handleEventClick}
             />
         </div>
     );
