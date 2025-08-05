@@ -234,21 +234,26 @@ export const Calendar = () => {
         setSelectedDateEvents(dateEvents);
     };
 
-    const handleAddTask = (newTask: Omit<CalendarEvent, "id">) => {
-        const task: CalendarEvent = {
+    const handleAddTask = async (newTask: Omit<CalendarEvent, "id">) => {
+        await createTask({
             ...newTask,
-            id: Math.random().toString(36).substr(2, 9),
-        };
-        setEvents([...events, task]);
+            description: newTask.description ?? "",
+            assignees: (newTask.assignees ?? []).map((a: any) => typeof a === "string" ? a : a.name),
+            assigneeIds: (newTask.assigneeIds ?? []).map((a: any) => typeof a === "string" ? a : a.id),
+            allDay: newTask.allDay ?? false,
+            createdAt: Date.now(),
+            completed: false,
+            repeat: newTask.repeat ?? "none",
+        });
         setShowAddTask(false);
 
         // Add notification for new task
         const newTaskNotification: Notification = {
-            id: `new-${task.id}`,
+            id: `new-${newTask.title}`,
             type: "new_task",
-            message: `New task "${task.title}" has been created`,
+            message: `New task "${newTask.title}" has been created`,
             timestamp: new Date(),
-            taskId: task.id,
+            taskId: newTask.title,
         };
         setNotifications(prev => [...prev, newTaskNotification]);
 
