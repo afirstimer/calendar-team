@@ -6,16 +6,26 @@ import { CalendarHeader } from "./CalendarHeader";
 import { ViewSelector } from "./ViewSelector";
 import { TaskDetailDialog } from "./TaskDetailDialog";
 import { AddTaskDialog } from "./AddTaskDialog";
-import { completeTask, createTask, deleteTask, getTasks } from "../lib/taskService";
+import { UserList } from "./UserList";
+import { DateTasksDialog } from "./DateTasksDialog";
+import { NotificationBell } from "./NotificationBell";
+import { useToast } from "@/hooks/use-toast";
+import { completeTask, createTask, deleteTask, getTasks, updateTask } from "../lib/taskService";
 import { useAuth } from "@/context/AuthContext";
 import { User as UserIcon, LogOut } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserList } from "./UserList";
-import { useToast } from "@/hooks/use-toast";
-import { DateTasksDialog } from "./DateTasksDialog";
+import type { TaskInput } from "../lib/types";
 
 export type CalendarView = "month" | "week" | "day" | "list" | "resources" | "timeline";
+
+export interface Notification {
+    id: string;
+    type: "new_task" | "late_task";
+    message: string;
+    timestamp: Date;
+    taskId?: string;
+}
 
 export interface Person {
     id: string;
@@ -31,10 +41,10 @@ export interface CalendarEvent {
     startTime: string;
     endTime: string;
     date: string;
-    color: "blue" | "red" | "purple" | "green" | "yellow";
+    color: "blue" | "red" | "purple" | "green" | "orange";
     allDay?: boolean;
     description?: string;
-    assignees?: string[];
+    assignees?: Person[];
     assigneeIds?: string[];
     priority?: "low" | "medium" | "high";
     repeat?: "none" | "daily" | "weekly" | "monthly";
@@ -54,23 +64,12 @@ export const Calendar = () => {
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedDateEvents, setSelectedDateEvents] = useState<CalendarEvent[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const { toast } = useToast();
 
     const handleUserClick = (userId: string) => {
         setSelectedUserId(userId);
     };
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setShowMenu(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -126,7 +125,46 @@ export const Calendar = () => {
         };
 
         fetchTasks();
-    }, [selectedUserId, user]);
+    }, [user, selectedUserId]);
+
+
+    // Check for late tasks on component mount and when events change
+    useEffect(() => {
+
+        const checkLateTasks = () => {
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            const lateTasksFromYesterday = events.filter(event => {
+                const eventDate = new Date(event.date);
+                return eventDate < today && eventDate.toDateString() === yesterday.toDateString();
+            });
+
+            const lateNotifications: Notification[] = lateTasksFromYesterday.map(task => ({
+                id: `late-${task.id}`,
+                type: "late_task" as const,
+                message: `Task "${task.title}" from yesterday is overdue`,
+                timestamp: new Date(),
+                taskId: task.id,
+            }));
+
+            // Only add notifications for tasks we haven't already notified about
+            const existingLateTaskIds = notifications
+                .filter(n => n.type === "late_task")
+                .map(n => n.taskId);
+
+            const newLateNotifications = lateNotifications.filter(
+                notification => !existingLateTaskIds.includes(notification.taskId)
+            );
+
+            if (newLateNotifications.length > 0) {
+                setNotifications(prev => [...prev, ...newLateNotifications]);
+            }
+        };
+
+        checkLateTasks();
+    }, [events, notifications]);
 
     const navigateDate = (direction: "prev" | "next") => {
         const newDate = new Date(currentDate);
@@ -195,34 +233,86 @@ export const Calendar = () => {
         setSelectedDateEvents(dateEvents);
     };
 
-    const handleAddTask = async (task: Omit<CalendarEvent, "id">) => {
-        await createTask({
-            ...task,
-            description: task.description ?? "",
-            assignees: (task.assignees ?? []).map((a: any) => typeof a === "string" ? a : a.name),
-            assigneeIds: (task.assigneeIds ?? []).map((a: any) => typeof a === "string" ? a : a.id),
-            allDay: task.allDay ?? false,
-            createdAt: Date.now(),
-            completed: false,
-            repeat: task.repeat ?? "none",
-        });
+    const handleAddTask = (newTask: Omit<CalendarEvent, "id">) => {
+        const task: CalendarEvent = {
+            ...newTask,
+            id: Math.random().toString(36).substr(2, 9),
+        };
+        setEvents([...events, task]);
         setShowAddTask(false);
+
+        // Add notification for new task
+        const newTaskNotification: Notification = {
+            id: `new-${task.id}`,
+            type: "new_task",
+            message: `New task "${task.title}" has been created`,
+            timestamp: new Date(),
+            taskId: task.id,
+        };
+        setNotifications(prev => [...prev, newTaskNotification]);
+
         toast({
             title: "Task Added",
             description: "Your task has been successfully created.",
         });
-        // reload page
+
+        // Reload the page
         window.location.reload();
     };
 
     const handleCompleteTask = async (event: CalendarEvent) => {
         await completeTask(event.id);
-        // Option 1: Re-fetch tasks (simple & clean)
         window.location.reload();
+        toast({
+            title: "Task Completed",
+            description: "Your task has been marked as completed.",
+        });
+    };
+
+
+    const handleEventUpdate = async (updatedEvent: CalendarEvent) => {
+        setEvents(prevEvents =>
+            prevEvents.map(event =>
+                event.id === updatedEvent.id ? updatedEvent : event
+            )
+        );
+
+        if (!updatedEvent.id) return;
+
+        const updatedTask: Partial<TaskInput> = {
+            title: updatedEvent.title,
+            date: updatedEvent.date,
+            startTime: updatedEvent.startTime,
+            endTime: updatedEvent.endTime,
+            color: updatedEvent.color,
+            description: updatedEvent.description,
+            assignees: updatedEvent.assignees?.map(assignee => assignee.id),
+            completed: updatedEvent.completed,
+        };
+
+        // Remove undefined values
+        const cleanedTask = Object.fromEntries(
+            Object.entries(updatedTask).filter(([_, value]) => value !== undefined)
+        );
+
+        await updateTask(updatedEvent.id, cleanedTask);
+
+        toast({
+            title: "Task Moved",
+            description: "Your task has been moved to a new date.",
+        });
     };
 
     const goToToday = () => {
         setCurrentDate(new Date());
+    };
+
+    const handleMarkNotificationAsRead = (notificationId: string) => {
+        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    };
+
+    const handleClearAllNotifications = () => {
+        setNotifications([]);
     };
 
     return (
@@ -259,49 +349,57 @@ export const Calendar = () => {
                     </div>
                 </div>
 
-                <UserList people={people} onUserClick={handleUserClick} />
-                <div className="flex items-center gap-4">
-                    <ViewSelector currentView={view} onViewChange={setView} />
-                    <Button onClick={() => setShowAddTask(true)} className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add Task
-                    </Button>
-                    <div className="relative" ref={menuRef}>
-                        <button
-                            onClick={() => setShowMenu((prev) => !prev)}
-                            className="p-2 rounded-full border hover:bg-muted"
-                        >
-                            <UserIcon className="h-5 w-5" />
-                        </button>
+                <div className="flex items-center gap-6">
+                    <UserList people={people} onUserClick={handleUserClick} />
+                    <div className="flex items-center gap-4">
+                        <ViewSelector currentView={view} onViewChange={setView} />
+                        <NotificationBell
+                            notifications={notifications}
+                            onMarkAsRead={handleMarkNotificationAsRead}
+                            onClearAll={handleClearAllNotifications}
+                        />
+                        <Button onClick={() => setShowAddTask(true)} className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            Add Task
+                        </Button>
+                        <div className="relative" ref={menuRef}>
+                            <button
+                                onClick={() => setShowMenu((prev) => !prev)}
+                                className="p-2 rounded-full border hover:bg-muted"
+                            >
+                                <UserIcon className="h-5 w-5" />
+                            </button>
 
-                        {showMenu && (
-                            <div className="absolute right-0 mt-2 w-40 bg-white border shadow-md rounded z-10">
-                                <div className="px-4 py-2 text-sm text-muted-foreground border-b">
-                                    {user?.email ?? "Unknown"}
+                            {showMenu && (
+                                <div className="absolute right-0 mt-2 w-40 bg-white border shadow-md rounded z-10">
+                                    <div className="px-4 py-2 text-sm text-muted-foreground border-b">
+                                        {user?.email ?? "Unknown"}
+                                    </div>
+                                    <button
+                                        onClick={logout}
+                                        className="flex items-center gap-2 w-full px-4 py-2 text-sm hover:bg-muted"
+                                    >
+                                        <LogOut className="h-4 w-4" />
+                                        Logout
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={logout}
-                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm hover:bg-muted"
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                    Logout
-                                </button>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             </CalendarHeader>
 
-            {selectedUserId ? (
-                <p className="py-4 bg-muted/50 border-b border-calendar-grid flex justify-center">
-                    You are viewing tasks of {people.find((p) => p.id === selectedUserId)?.name || "Unknown"}
-                </p>
-            ) : (
-                <p className="py-4 bg-muted/50 border-b border-calendar-grid flex justify-center">
-                    You are viewing your tasks
-                </p>
-            )}
-
+            <div className="px-4 py-3 bg-muted/50 border-b border-calendar-grid">
+                {selectedUserId ? (
+                    <p className="py-4 bg-muted/50 border-b border-calendar-grid flex justify-center">
+                        You are viewing tasks of {people.find((p) => p.id === selectedUserId)?.name || "Unknown"}
+                    </p>
+                ) : (
+                    <p className="py-4 bg-muted/50 border-b border-calendar-grid flex justify-center">
+                        You are viewing your tasks
+                    </p>
+                )}
+            </div>
 
             <CalendarGrid
                 currentDate={currentDate}
@@ -309,6 +407,7 @@ export const Calendar = () => {
                 view={view}
                 onEventClick={handleEventClick}
                 onDateClick={handleDateClick}
+                onEventUpdate={handleEventUpdate}
             />
 
             <TaskDetailDialog
@@ -318,6 +417,8 @@ export const Calendar = () => {
                 onDelete={deleteTask}
                 onComplete={handleCompleteTask}
                 isAdmin={people.find((p) => p.id === user?.uid)?.isAdmin ?? false}
+                onEventUpdate={handleEventUpdate}
+                people={people}
             />
 
             <AddTaskDialog

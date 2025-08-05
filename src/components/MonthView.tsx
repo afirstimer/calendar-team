@@ -5,9 +5,10 @@ interface MonthViewProps {
     events: CalendarEvent[];
     onEventClick?: (event: CalendarEvent) => void;
     onDateClick?: (date: Date, events: CalendarEvent[]) => void;
+    onEventUpdate?: (updatedEvent: CalendarEvent) => void;
 }
 
-export const MonthView = ({ currentDate, events, onEventClick, onDateClick }: MonthViewProps) => {
+export const MonthView = ({ currentDate, events, onEventClick, onDateClick, onEventUpdate }: MonthViewProps) => {
     const getMonthDays = () => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -57,6 +58,40 @@ export const MonthView = ({ currentDate, events, onEventClick, onDateClick }: Mo
 
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+    const handleDragStart = (e: React.DragEvent, event: CalendarEvent) => {
+        e.dataTransfer.setData('text/plain', JSON.stringify(event));
+        e.stopPropagation();
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+    };
+
+    const handleDrop = (e: React.DragEvent, targetDate: Date) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const eventData = e.dataTransfer.getData('text/plain');
+        if (!eventData || !onEventUpdate) return;
+
+        try {
+            const draggedEvent = JSON.parse(eventData) as CalendarEvent;
+            const newDateStr = targetDate.toISOString().split('T')[0];
+
+            // Don't update if dropped on the same date
+            if (draggedEvent.date === newDateStr) return;
+
+            const updatedEvent = {
+                ...draggedEvent,
+                date: newDateStr
+            };
+
+            onEventUpdate(updatedEvent);
+        } catch (error) {
+            console.error('Error updating event:', error);
+        }
+    };
+
     return (
         <div className="flex-1 flex flex-col p-4">
             {/* Month header */}
@@ -88,6 +123,8 @@ export const MonthView = ({ currentDate, events, onEventClick, onDateClick }: Mo
                             className={`bg-background p-2 min-h-[120px] relative cursor-pointer hover:bg-muted/50 ${!isCurrentMonth ? 'text-muted-foreground' : ''
                                 } ${isToday ? 'bg-calendar-today' : ''}`}
                             onClick={() => onDateClick?.(date, dayEvents)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, date)}
                         >
                             <div className={`text-sm font-medium mb-1 ${isToday ? 'text-primary' : ''}`}>
                                 {date.getDate()}
@@ -101,7 +138,12 @@ export const MonthView = ({ currentDate, events, onEventClick, onDateClick }: Mo
                                         className={event.completed ? 'line-through text-muted-foreground' : 'text-xs p-1 rounded text-white truncate cursor-pointer hover:opacity-90'}
                                         style={{ backgroundColor: `hsl(var(--event-${event.color}))` }}
                                         title={event.title}
-                                        onClick={() => onEventClick?.(event)}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, event)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEventClick?.(event);
+                                        }}
                                     >
                                         {event.allDay ? event.title : `${event.startTime} ${event.title}`}
                                     </div>
