@@ -113,19 +113,17 @@ export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete, onComplete,
                     <Button variant="outline" onClick={onClose}>
                         Close
                     </Button>
-                    {isAdmin && (
-                        <Button
-                            variant="destructive"
-                            onClick={() => {
-                                if (event.id) {
-                                    onDelete(event.id);
-                                    onClose();
-                                }
-                            }}
-                        >
-                            Delete Task
-                        </Button>
-                    )}
+                    <Button
+                        variant="destructive"
+                        onClick={() => {
+                            if (event.id) {
+                                onDelete(event.id);
+                                onClose();
+                            }
+                        }}
+                    >
+                        Delete Task
+                    </Button>
                 </div>
 
             </DialogContent>
