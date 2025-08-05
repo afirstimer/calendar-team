@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarEvent, Person } from "./Calendar";
-import { Clock, Calendar, Users, Edit2, Save, X } from "lucide-react";
+import { Clock, Calendar, Users, Edit2, Save, X, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface TaskDetailDialogProps {
@@ -302,17 +302,29 @@ export const TaskDetailDialog = ({ event, isOpen, onClose, onDelete, onComplete,
                         </>
                     )}
                 </div>
-                {!isEditing && onEventUpdate && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsEditing(true)}
-                        className="gap-2"
-                    >
-                        <Edit2 className="h-4 w-4" />
-                        Edit
+                <div className="flex gap-2 pt-4 justify-center">
+                    <Button variant="destructive" onClick={() => onDelete(event.id)}>
+                        <X className="h-4 w-4" />
+                        Delete
                     </Button>
-                )}
+                    {!event.completed && (
+                        <Button variant="default" onClick={() => onComplete(event)}>
+                            <Check className="h-4 w-4" />
+                            Complete
+                        </Button>
+                    )}
+                    {!isEditing && onEventUpdate && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsEditing(true)}
+                            className="gap-2"
+                        >
+                            <Edit2 className="h-4 w-4" />
+                            Edit
+                        </Button>
+                    )}
+                </div>
             </DialogContent>
         </Dialog>
     );

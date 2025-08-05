@@ -137,6 +137,7 @@ export const Calendar = () => {
             yesterday.setDate(yesterday.getDate() - 1);
 
             const lateTasksFromYesterday = events.filter(event => {
+                if (event.completed) return false;
                 const eventDate = new Date(event.date);
                 return eventDate < today && eventDate.toDateString() === yesterday.toDateString();
             });
